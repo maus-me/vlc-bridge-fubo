@@ -1,6 +1,10 @@
 import requests
 import time
+from datetime import datetime
 from threading import Lock
+from xmltv.models import xmltv
+from xsdata.formats.dataclass.serializers import XmlSerializer
+from xsdata.formats.dataclass.serializers.config import SerializerConfig
 
 class Client:
     def __init__(self):
@@ -37,4 +41,39 @@ class Client:
                 "url": ch["seasons"][0]["episodes"][0]["content"]["url"].split('?', 1)[0],
             })
         return stations, None
+
+    def epg(self):
+        self.load_feed()
+        epg = xmltv.Tv(
+            source_info_name="distrotv",
+            generator_info_name="vlc-bridge"
+        )
+        ids = {}
+        for ch in self.feed["shows"].values():
+            ids[str(ch["seasons"][0]["episodes"][0]["id"])] = ch["name"]
+            epg.channel.append(xmltv.Channel(
+                id=ch["name"],
+                display_name=[ch["title"].strip()]
+            ))
+        data = self.session.get("https://tv.jsrdn.com/epg/query.php?id="+ ",".join(ids.keys())).json()
+        for id, name in ids.items():
+            if (ch := data["epg"].get(id)) is not None and (slots := ch.get("slots")) is not None:
+                for slot in slots:
+                    epg.programme.append(xmltv.Programme(
+                        channel=name,
+                        title=ch["title"].strip(),
+                        sub_title=slot["title"].strip(),
+                        desc=(slot.get("description") or "").strip(),
+                        icon=slot["img_thumbh"],
+                        start=datetime.strptime(slot["start"], '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d%H%M%S'),
+                        stop=datetime.strptime(slot["end"], '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d%H%M%S'),
+                    ))
+        serializer = XmlSerializer(config=SerializerConfig(
+            pretty_print=True,
+            encoding="UTF-8",
+            xml_version="1.1",
+            xml_declaration=False,
+            no_namespace_schema_location=None
+        ))
+        return serializer.render(epg)
 

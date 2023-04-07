@@ -18,6 +18,10 @@ def index():
         pl = f"http://{host}/{p}/playlist.m3u"
         ul += f"<li>{p.upper()}: <a href='{pl}'>{pl}</a></li>\n"
 
+        if hasattr(providers[p], 'epg'):
+            epg = f"http://{host}/{p}/epg.xml"
+            ul += f"<li>{p.upper()}: <a href='{epg}'>{epg}</a></li>\n"
+
     return f"<h1>Playlist</h1>\n<ul>\n{ul}</ul>"
 
 @app.get("/<provider>/playlist.m3u")
@@ -41,6 +45,12 @@ def playlist(provider):
         m3u += f",{s.get('name') or s.get('id')}\n"
         m3u += f"{s['url']}\n\n"
     return m3u
+
+@app.get("/<provider>/epg.xml")
+def epg(provider):
+    if not hasattr(providers[provider], 'epg'):
+        return "Not supported", 404
+    return providers[provider].epg()
 
 if __name__ == '__main__':
     sys.stdout.write("⇨ http server started on [::]:7777\n")

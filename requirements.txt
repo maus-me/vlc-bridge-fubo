@@ -1,3 +1,5 @@
 gevent
 flask
 requests
+py-xmltv
+xsdata[cli]
