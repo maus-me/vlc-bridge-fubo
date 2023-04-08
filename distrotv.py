@@ -61,8 +61,7 @@ class Client:
                 for slot in slots:
                     epg.programme.append(xmltv.Programme(
                         channel=name,
-                        title=ch["title"].strip(),
-                        sub_title=slot["title"].strip(),
+                        title=slot["title"].strip(),
                         desc=(slot.get("description") or "").strip(),
                         icon=slot["img_thumbh"],
                         start=datetime.strptime(slot["start"], '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d%H%M%S'),
