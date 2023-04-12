@@ -64,8 +64,8 @@ class Client:
                         title=slot["title"].strip(),
                         desc=(slot.get("description") or "").strip(),
                         icon=slot["img_thumbh"],
-                        start=datetime.strptime(slot["start"], '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d%H%M%S'),
-                        stop=datetime.strptime(slot["end"], '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d%H%M%S'),
+                        start=datetime.strptime(slot["start"], '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d%H%M%S') + " +0000",
+                        stop=datetime.strptime(slot["end"], '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d%H%M%S') + " +0000",
                     ))
         serializer = XmlSerializer(config=SerializerConfig(
             pretty_print=True,
