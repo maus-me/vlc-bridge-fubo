@@ -3,21 +3,7 @@
 watch fubo.tv live stream in VLC
 This takes FUBO programming and transforms it into a "live TV" experience with virtual linear channels that you can import into something like Jellyfin/Emby/Channels.
 
-This was not made for pirating streams.  This is made for using your own credentials and haave a different presentation than the FUBO app currently provides.
-
-### using
-
-`$ docker run -d -p 7777:7777 --name vlc-bridge-distrotv registry.gitlab.com/miibeez/vlc-bridge-distrotv`
-
-`$ vlc http://localhost:7777/distrotv/playlist.m3u`
-
-### epg
-
-`http://localhost:7777/distrotv/epg.xml`
-
-# vlc-bridge-fubo
-
-
+This was not made for pirating streams.  This is made for using your own credentials and have a different presentation than the FUBO app currently provides.
 
 ## Docker
 
