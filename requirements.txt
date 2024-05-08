@@ -3,3 +3,4 @@ flask
 requests
 py-xmltv
 xsdata[cli]
+python-dotenv
