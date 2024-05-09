@@ -14,8 +14,8 @@ docker run -d -e 'FUBO_USER=<username>' -e 'FUBO_PASS=<password>' -p 7777:7777 -
 ## Native
 
 ```
-git clone https://gitlab.com/Yankees4life/vlc-bridge-fubo
+git clone https://github.com/maus-me/vlc-bridge-fubo
 cd vlc-bridge-fubo
 pip3 install -r requirements.txt
-python3 pywsgi.py
+python3 server.py
 ```
