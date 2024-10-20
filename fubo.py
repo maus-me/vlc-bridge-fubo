@@ -147,7 +147,7 @@ class Client:
             # print(json.dumps(plan_data, indent=2))
             # print(json.dumps(user_data, indent=2))
 
-            for elem in user_data.get('recurly').get('purchased_packages'):
+            for elem in user_data.get('recurly').get('purchased_packages', {"fubotv-basic"}):
                 # print(elem)
                 match_filter_list = [element for element in plan_data if
                                      element.get("default_package", {}).get("slug") == elem]
@@ -172,10 +172,10 @@ class Client:
                                                   ch.get('meta').get('network_type'),
                                                   elem)
 
-                        self.add_package_channels(item.get('add_on_packages'),
-                                                  user_data.get('recurly').get('purchased_packages'))
-                        self.add_package_channels(item.get('expired_packages'),
-                                                  user_data.get('recurly').get('purchased_packages'))
+                        self.add_package_channels(item.get('add_on_packages'), 
+                                                  user_data.get('recurly').get('purchased_packages', {}))
+                        self.add_package_channels(item.get('expired_packages'), 
+                                                  user_data.get('recurly').get('purchased_packages', {}))
 
             for j in self.stations:
                 id = j.get('id', '')
