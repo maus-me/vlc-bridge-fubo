@@ -1,10 +1,4 @@
-import json
-import os
-import requests
-import secrets
-import shutil
-import sys
-import time
+import os, shutil, sys, requests, json, secrets, time
 from threading import Lock
 
 user = os.environ.get("FUBO_USER")
@@ -56,8 +50,7 @@ class Client:
             'user-agent': 'fuboTV/4.75.0 (Linux;Android 12; onn. 4K Streaming Box Build/SGZ1.221127.063.A1.9885170) FuboPlayer/v1.34.0',
         }
 
-    @staticmethod
-    def load_gracenote():
+    def load_gracenote(self):
         source = "./fubo-gracenote-default.json"
         destination = "./Config/fubo-gracenote.json"
 
@@ -86,99 +79,130 @@ class Client:
         return stream.get('streamUrls')[0].get('drmProtected'), None
 
     def add_stations(self, call_sign, station_id, displayName, networkLogo, network_type, group):
-        filter_list = list(filter(lambda d: d.get('id') == station_id, self.stations))
+        filter_list = list(filter(lambda d: d.get('stationId') == station_id, self.stations))
         if len(filter_list):
             # print(f'{displayName} in Channel list')
             for elem in self.stations:
-                if elem.get('id') == station_id:
+                if elem.get('stationId') == station_id:
                     elem_group = elem.get('group')
                     elem_group.append(group)
                     # print(elem_group)
-                    elem.update({'group': elem_group})
+                    # elem.update({'group': elem_group})
         else:
-            self.stations.append({'call_sign': call_sign,
-                                  'id': station_id,
-                                  'name': displayName,
-                                  'logo': networkLogo,
-                                  'network_type': network_type,
-                                  'group': [group],
-                                  })
+            self.stations.append({'callSign': call_sign,
+                                'stationId': station_id,
+                                'name': displayName,
+                                'logoOnWhite': networkLogo,
+                                'networkType': network_type,
+                                'group': [group],
+                               })
         return ()
 
-    def add_package_channels(self, package, purchased_package):
-        for add_on in purchased_package:
-            fubo_extra = list(filter(lambda d: add_on == d.get('slug', None), package))
-            # print(f"{add_on} part of add-on package")
-            print(f"{add_on} is {len(fubo_extra)}")
-            for extras in fubo_extra:
-                slug = extras.get('slug', None)
-                # print(f"    {slug}")
-                fubo_extra_channels = extras.get('channels')
-                # print(f"    Number of channels in add-on package {slug} is {len(fubo_extra_channels)}")
-                for ch in fubo_extra_channels:
-                    if ((ch.get('source') == 'Disney') or
-                            (ch.get('call_sign') == 'MXEF') or
-                            (ch.get('source') == 'Starz') or
-                            (ch.get('source') == 'Showtime')):
-                        # print (f"Channel {ch.get('meta').get('displayName')} has been removed due to DRM")
-                        continue
-                    else:
-                        self.add_stations(ch.get('call_sign'),
-                                          ch.get('station_id'),
-                                          ch.get('meta').get('networkName'),
-                                          ch.get('meta').get('networkLogoOnWhiteUrl'),
-                                          ch.get('meta').get('network_type'),
-                                          slug)
+    data_channels = []
+    addon_channels = []
+    addon_rate_plan_codes = []
+
 
     def channels(self):
         with self.mutex:
             gracenoteID = self.load_gracenote()
-            resp, error = self.api("v3/plan-manager/plans")
+            resp_source, error = self.api("v3/plan-manager/plans")
+            if error:
+                 return None, error
+            resp, error = self.api("subscriptions/products?tags=subscribed&subscribed=true")
             if error:
                 return None, error
-            resp_user, error = self.api("user")
+            resp_user, error = self.api("subscriptions")
             if error:
                 return None, error
             self.stations = []
 
-            plan_data = resp.get('data')
-            user_data = resp_user.get('data')
+            main_rate_plan_codes = []
+            all_rate_plan_codes = []
+            source_channels = []
 
-            # print(json.dumps(plan_data, indent=2))
-            # print(json.dumps(user_data, indent=2))
+            for main_plan in resp_user:
+                main_rate_plan_code = main_plan.get("ratePlanCode")
+                main_rate_plan_codes.append(main_rate_plan_code)
+            for addon_plan in main_plan.get('addons', []):
+                addon_rate_plan_code = addon_plan.get("ratePlanCode")
+                self.addon_rate_plan_codes.append(addon_rate_plan_code)
+            # print(self.addon_rate_plan_codes)
 
-            for elem in user_data.get('recurly').get('purchased_packages', {"fubotv-basic"}):
-                # print(elem)
-                match_filter_list = [element for element in plan_data if
-                                     element.get("default_package", {}).get("slug") == elem]
+            for data_channels_list in resp.get('products', []):
+                    for data_rate_plans in data_channels_list.get('ratePlans', []):
+                        if data_rate_plans.get('code') in main_rate_plan_codes:
+                            self.data_channels.append(data_channels_list)
+
+            for addon_channels_list in resp.get('addons', []):
+                for addon_channels_rate_plans in addon_channels_list.get('ratePlans', []):
+                    if addon_channels_rate_plans.get('code') in self.addon_rate_plan_codes:
+                        self.addon_channels.append(addon_channels_list)
+
+            for source in resp_source.get('data', []):
+                for source_channels_list in source.get('default_package', []).get('channels', []):
+                    source_channels.append(source_channels_list)
+                for addons_channels_list in source.get('add_on_packages', []):
+                    for addons_channels_channels in addons_channels_list.get('channels', []):
+                        source_channels.append(addons_channels_channels)
+
+            # print(json.dumps(source_channels, indent=2))
+
+            combine_channels = self.addon_channels + self.data_channels
+            combined_rate_plans = main_rate_plan_codes + self.addon_rate_plan_codes
+
+            # Create mapping of station_id to source
+            source_mapping = {}
+            for source_channel in source_channels:
+                if 'station_id' in source_channel:
+                    source_mapping[source_channel['station_id']] = source_channel.get('source')
+
+            # Update combine_channels with source values
+            for channel_group in combine_channels:
+                for channel in channel_group.get('channels', []):
+                    if 'stationId' in channel:
+                        station_id = channel['stationId']
+                        if station_id in source_mapping:
+                            channel['source'] = source_mapping[station_id]
+            # print(json.dumps(combine_channels, indent=2))
+
+            for elem in combined_rate_plans:
+                match_filter_list = list(
+                    filter(lambda d: any(rp.get('code') == elem for rp in d.get('ratePlans', [])), combine_channels))
+                # print(match_filter_list)
                 if len(match_filter_list):
-                    # print(f'{elem} In Group')
-                    # print(len(match_filter_list))
                     for item in match_filter_list:
-                        default_package = item.get('default_package').get('channels')
-                        # print(f"Number of default Channels {len(default_package)}")
-                        for ch in default_package:
+                        channels_list = item.get('channels', [])
+                        # print(f"Number of default Channels {len(channels_list)}")
+                        # print(channels_list)
+                        for ch in channels_list:
                             if ((ch.get('source') == 'Disney') or
-                                    (ch.get('call_sign') == 'MXEF') or
+                                    (ch.get('callSign') == 'MXEF') or
+                                    (ch.get('callSign') == 'ESPNUHD') or
+                                    (ch.get('callSign') == 'ESPNEWS') or
+                                    (ch.get('callSign') == 'ACCDN') or
+                                    (ch.get('callSign') == 'NGWIHD') or
+                                    (ch.get('callSign') == 'HALLHDDRM') or
+                                    (ch.get('callSign') == 'HMMHDDRM') or
+                                    (ch.get('callSign') == 'HALLDRDRM') or
+                                    (ch.get('callSign') == 'MDL') or #channel no longer available
+                                    (ch.get('callSign') == 'KNBC') or #NBC Los Angeles
+                                    (ch.get('callSign') == 'WNBC') or #NBC New York
+                                    (ch.get('callSign') == 'KCOP') or #MyNetwork Los Angeles
+                                    (ch.get('callSign') == 'WWORDT') or #MyNetwork New York
+                                    (ch.get('callSign') == 'GETCMDY') or #Get Comedy
                                     (ch.get('source') == 'Starz') or
                                     (ch.get('source') == 'Showtime')):
-                                print(f"Channel {ch.get('meta').get('displayName')} has been removed due to DRM")
                                 continue
                             else:
-                                self.add_stations(ch.get('call_sign'),
-                                                  ch.get('station_id'),
-                                                  ch.get('meta').get('networkName').replace(',', ''),
-                                                  ch.get('meta').get('networkLogoOnWhiteUrl'),
-                                                  ch.get('meta').get('network_type'),
+                                self.add_stations(ch.get('callSign'),
+                                                  ch.get('stationId'),
+                                                  ch.get('name', '').replace(',', ''),
+                                                  ch.get('logoOnWhite'),
+                                                  ch.get('networkType'),
                                                   elem)
-
-                        self.add_package_channels(item.get('add_on_packages'), 
-                                                  user_data.get('recurly').get('purchased_packages', {}))
-                        self.add_package_channels(item.get('expired_packages'), 
-                                                  user_data.get('recurly').get('purchased_packages', {}))
-
             for j in self.stations:
-                id = j.get('id', '')
+                id = j.get('stationId', '')
                 gracenote = gracenoteID.get(str(id), {})
                 gracenoteId = gracenote.get("StationID", None)
                 timeShift = gracenote.get("TimeShift", None)
@@ -194,9 +218,9 @@ class Client:
                 grp = elem.get("group")
                 elem.update({"group": list(sorted(grp))})
             sorted_ch_list = sorted(ch_list, key=lambda x: (
-                0 if x['group'] and x['group'][0] == 'fubotv-basic' else 1,
-                x['group'][0] if x['group'] else '',  # Use an empty string if group is empty
-                0 if x['network_type'] == 'OTA' else (1 if x['network_type'] == 'RSN' else 2),
+        #        0 if x['group'] and x['group'][0] == main_rate_plan_codes else 1,
+        #        x['group'][0] if x['group'] else '',  # Use an empty string if group is empty
+                0 if x['networkType'] == 'OTA' else (1 if x['networkType'] == 'RSN' else 2),
                 x['name']
             ))
             # (0 if x['group'][0] == 'fubotv-basic' else 1, x['group'][0], x['name']))
