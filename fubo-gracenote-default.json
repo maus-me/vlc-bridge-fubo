@@ -302,5 +302,16 @@
     "128840": {"StationID": "72835", "name": "NBA League Pass 7 HD - TMHD7"},
     "128842": {"StationID": "72836", "name": "NBA League Pass 8 HD - TMHD8"},
     "128844": {"StationID": "72837", "name": "NBA League Pass 9 HD - TMHD9"},
-    "128845": {"StationID": "102709", "name": "NBA League Pass 10 HD - TMHD10"}    
+    "128845": {"StationID": "102709", "name": "NBA League Pass 10 HD - TMHD10"},
+    "46288": {"StationID": "30017", "name": "Yes Network - YES"},
+    "134109": {"StationID": "134109", "name": "Always Funny - ALWFV"},
+    "54552": {"StationID": "54437", "name": "Telemundo - WNJU"},
+    "102430": {"StationID": "78851", "name": "Cozi TV - COZITV"},
+    "77366": {"StationID": "11000", "name": "New England Cable News - NECN"},
+    "35220000": {"StationID": "159918", "name": "BKFCTV - BKFCTV"},
+    "35930000": {"StationID": "167129", "name": "Crime Time - FUBOCRM"},
+    "34870000": {"StationID": "159241", "name": "Love Bites - FUBOXO"},
+    "34880000": {"StationID": "159240", "name": "Man Cave Movies - FUBOMC"},
+    "35960000": {"StationID": "167195", "name": "Terrified - FUBOTER"}
+
 }
